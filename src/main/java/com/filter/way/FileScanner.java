@@ -1,7 +1,7 @@
 package com.filter.way;
 
 import java.io.File;
-
+import org.jdom2.Namespace;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -39,18 +39,16 @@ public class FileScanner { // 定义一个公共类 FileScanner
                         // 检查文件名是否是我们要找的文件
                         if (isTargetFile(file)) {
                             try {
+                                System.out.println("File absolute path: " + file.getAbsolutePath());
                                 SAXBuilder builder = new SAXBuilder();
                                 Document document = builder.build(file);
                                 Element root = document.getRootElement();
-
-//                                // 检查dependencies元素是否存在，如果不存在则创建
-//                                Element dependencies = root.getChild("dependencies");
-//                                if (dependencies == null) {
-//                                    dependencies = new Element("dependencies");
-//                                    root.addContent(dependencies);
 //                                }
-                                List<Element> dependenciesList = root.getChildren("dependencies");
+                                Namespace ns = root.getNamespace();
+                                System.out.println(ns);
+                                List<Element> dependenciesList = root.getChildren("dependencies",ns);
                                 // 检查是否已经存在<dependencies>元素
+                                System.out.println(dependenciesList);
                                 Element dependencies;
                                 if (dependenciesList.isEmpty()) {
                                     // 如果不存在则创建<dependencies>元素
@@ -63,9 +61,9 @@ public class FileScanner { // 定义一个公共类 FileScanner
 
                                 // 创建一个新的dependency元素
                                 Element dependency = new Element("dependency");
-                                Element groupId = new Element("groupId").setText("com.example");
-                                Element artifactId = new Element("artifactId").setText("example-artifact");
-                                Element version = new Element("version").setText("1.0.0");
+                                Element groupId = new Element("groupId").setText("com.alipay.sofa.koupleless");
+                                Element artifactId = new Element("artifactId").setText("koupleless-app-starter");
+                                Element version = new Element("version").setText("${koupleless.runtime.version}");
 
                                 // 将groupId, artifactId, version添加到dependency元素中
                                 dependency.addContent(groupId);
@@ -74,6 +72,44 @@ public class FileScanner { // 定义一个公共类 FileScanner
 
                                 // 将新的dependency元素添加到dependencies元素中
                                 dependencies.addContent(dependency);
+                                Element build = root.getChild("build", ns);
+                                if (build == null) {
+                                    // 如果 <build> 不存在则创建
+                                    build = new Element("build", ns);
+                                    root.addContent(build);
+                                }
+
+                                // 获取 <plugins> 元素
+                                Element plugins = build.getChild("plugins", ns);
+                                if (plugins == null) {
+                                    // 如果 <plugins> 不存在则创建
+                                    plugins = new Element("plugins", ns);
+                                    build.addContent(plugins);
+                                }
+                                // 创建并添加 <plugin> 元素
+                                Element plugin = new Element("plugin", ns);
+                                Element pluginGroupId = new Element("groupId", ns).setText("com.alipay.sofa");
+                                Element pluginArtifactId = new Element("artifactId", ns).setText("sofa-ark-maven-plugin");
+                                Element pluginVersion = new Element("version", ns).setText("{sofa.ark.version}");
+                                Element executions = new Element("executions", ns);
+
+                                // 添加子元素到 <plugin>
+                                plugin.addContent(pluginGroupId);
+                                plugin.addContent(pluginArtifactId);
+                                plugin.addContent(pluginVersion);
+                                // 创建并添加 <executions> 元素
+                                Element execution = new Element("execution", ns);
+                                Element id = new Element("id", ns).setText("default-cli");
+                                Element goals = new Element("goals", ns);
+                                Element goal = new Element("goal", ns).setText("repackage");
+
+                                goals.addContent(goal);
+                                execution.addContent(id);
+                                execution.addContent(goals);
+                                executions.addContent(execution);
+                                plugin.addContent(executions);
+
+                                plugins.addContent(plugin);
 
                                 // 使用XMLOutputter输出修改后的Document到文件
                                 XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
