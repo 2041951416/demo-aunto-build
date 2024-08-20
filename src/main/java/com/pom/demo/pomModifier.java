@@ -1,4 +1,4 @@
-package com.filter.way;
+package com.pom.demo;
 
 import java.io.File;
 import org.jdom2.Namespace;
@@ -9,15 +9,14 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 
-public class FileScanner { // 定义一个公共类 FileScanner
+public class pomModifier { // 定义一个公共类 FileScanner
     public static void main(String[] args) throws IOException, JDOMException { // 程序的入口点
 
-        String projectPath = "C:\\demo810"; // 设置项目路径变量
+        String projectPath = "D:\\demo1"; // 设置项目路径变量
         scanForFiles(projectPath); // 调用扫描方法，开始扫描
     }
 
@@ -45,10 +44,25 @@ public class FileScanner { // 定义一个公共类 FileScanner
                                 Element root = document.getRootElement();
 //                                }
                                 Namespace ns = root.getNamespace();
-                                System.out.println(ns);
+                                //创建一个properties元素
+                                List<Element> propertiesList = root.getChildren("properties",ns);
+                                // 检查是否已经存在<properties>元素
+                                Element properties;
+                                if (propertiesList.isEmpty()) {
+                                    // 如果不存在则创建<properties>元素
+                                    properties = new Element("properties");
+                                    root.addContent(properties);
+                                } else {
+                                    // 如果存在，使用第一个<properties>元素
+                                    properties = propertiesList.get(0);
+
+                                }
+                                Element sofaark = new Element("sofa.ark.version").setText("2.2.12");
+                                Element koupleless=new Element("koupleless.runtime.version").setText("1.2.3");
+                                properties.addContent(sofaark);
+                                properties.addContent(koupleless);
                                 List<Element> dependenciesList = root.getChildren("dependencies",ns);
                                 // 检查是否已经存在<dependencies>元素
-                                System.out.println(dependenciesList);
                                 Element dependencies;
                                 if (dependenciesList.isEmpty()) {
                                     // 如果不存在则创建<dependencies>元素
@@ -58,7 +72,6 @@ public class FileScanner { // 定义一个公共类 FileScanner
                                     // 如果存在，使用第一个<dependencies>元素
                                     dependencies = dependenciesList.get(0);
                                 }
-
                                 // 创建一个新的dependency元素
                                 Element dependency = new Element("dependency");
                                 Element groupId = new Element("groupId").setText("com.alipay.sofa.koupleless");
@@ -87,29 +100,45 @@ public class FileScanner { // 定义一个公共类 FileScanner
                                     build.addContent(plugins);
                                 }
                                 // 创建并添加 <plugin> 元素
-                                Element plugin = new Element("plugin", ns);
+                                Element plugin1 = new Element("plugin", ns);
                                 Element pluginGroupId = new Element("groupId", ns).setText("com.alipay.sofa");
                                 Element pluginArtifactId = new Element("artifactId", ns).setText("sofa-ark-maven-plugin");
                                 Element pluginVersion = new Element("version", ns).setText("{sofa.ark.version}");
                                 Element executions = new Element("executions", ns);
 
                                 // 添加子元素到 <plugin>
-                                plugin.addContent(pluginGroupId);
-                                plugin.addContent(pluginArtifactId);
-                                plugin.addContent(pluginVersion);
+                                plugin1.addContent(pluginGroupId);
+                                plugin1.addContent(pluginArtifactId);
+                                plugin1.addContent(pluginVersion);
                                 // 创建并添加 <executions> 元素
                                 Element execution = new Element("execution", ns);
                                 Element id = new Element("id", ns).setText("default-cli");
                                 Element goals = new Element("goals", ns);
                                 Element goal = new Element("goal", ns).setText("repackage");
-
                                 goals.addContent(goal);
                                 execution.addContent(id);
                                 execution.addContent(goals);
                                 executions.addContent(execution);
-                                plugin.addContent(executions);
-
-                                plugins.addContent(plugin);
+                                Element configuration = new Element("configuration", ns);
+                                Element skipArkExectable= new Element("skipArkExecutable", ns).setText("true");
+                                Element outputDirectory = new Element("outputDirectory", ns).setText("./target");
+                                Element bizname= new Element("bizName", ns).setText("demo888.biz");
+                                Element webcontext = new Element("webContext", ns).setText("demo888.webcontext");
+                                Element declareMode= new Element("declareMode", ns).setText("true");
+                                configuration.addContent(skipArkExectable);
+                                configuration.addContent(outputDirectory);
+                                configuration.addContent(bizname);
+                                configuration.addContent(webcontext);
+                                configuration.addContent(declareMode);
+                                plugin1.addContent(executions);
+                                plugin1.addContent(configuration);
+                                Element plugin2 = new Element("plugin", ns);
+                                Element pluginGroupId2 = new Element("groupId", ns).setText("org.springframework.boot");
+                                Element pluginArtifactId2 = new Element("artifactId", ns).setText("spring-boot-maven-plugin");
+                                plugin2.addContent(pluginGroupId2);
+                                plugin2.addContent(pluginArtifactId2);
+                                plugins.addContent(plugin1);
+                                plugins.addContent(plugin2);
 
                                 // 使用XMLOutputter输出修改后的Document到文件
                                 XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
