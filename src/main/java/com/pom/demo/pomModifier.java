@@ -156,7 +156,7 @@ public class pomModifier { // 定义一个公共类 FileScanner
         }
     }
 
-    private static boolean isTargetFile(File file) { // 定义一个私有静态方法，用于检查文件是否为目标文件
+    static boolean isTargetFile(File file) { // 定义一个私有静态方法，用于检查文件是否为目标文件
         // 检查文件名是否是 application.properties 或 pom.xml
         return
                 file.getName().equalsIgnoreCase("pom.xml"); // 如果文件名是 pom.xml，返回 true

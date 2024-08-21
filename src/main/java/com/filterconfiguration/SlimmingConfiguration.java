@@ -1,16 +1,27 @@
 package com.filterconfiguration;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
-public class slimmingConfiguration {
+public class SlimmingConfiguration {
 
     public static void main(String[] args) {
         // 设定目标路径
         String targetDirectory = "C:\\demo810/conf/ark";
         String fileName = "bootstrap.properties";
 
-        // 创建con/ark目录
+        // 调用方法创建bootstrap.properties文件并写入内容
+        createBootstrapProperties(targetDirectory, fileName);
+    }
+
+    /**
+     * 创建并写入bootstrap.properties文件的方法
+     * @param targetDirectory 目标目录路径
+     * @param fileName 文件名
+     */
+    public static void createBootstrapProperties(String targetDirectory, String fileName) {
+        // 创建目标目录
         File directory = new File(targetDirectory);
         if (!directory.exists()) {
             if (directory.mkdirs()) {
