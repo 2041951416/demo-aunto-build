@@ -41,20 +41,20 @@ public class ApplicationPropertiesModifier {
         }
     }
 
-    private static void modifySpringApplicationName(File file, String appName) {
-        Path path = file.toPath();
-        try {
-            // 读取文件内容
-            List<String> lines = Files.readAllLines(path);
-            // 定位并修改 spring.application.name 的值
-            String modifiedContent = lines.stream()
-                    .map(line -> line.startsWith("spring.application.name") ? "spring.application.name=" + appName : line)
-                    .collect(Collectors.joining(System.lineSeparator()));
+        static void modifySpringApplicationName(File file, String appName) {
+            Path path = file.toPath();
+            try {
+                // 读取文件内容
+                List<String> lines = Files.readAllLines(path);
+                // 定位并修改 spring.application.name 的值
+                String modifiedContent = lines.stream()
+                        .map(line -> line.startsWith("spring.application.name") ? "spring.application.name=" + appName : line)
+                        .collect(Collectors.joining(System.lineSeparator()));
 
-            // 将修改后的内容写回文件
-            Files.write(path, modifiedContent.getBytes());
-        } catch (IOException e) {
-            e.printStackTrace();
+                // 将修改后的内容写回文件
+                Files.write(path, modifiedContent.getBytes());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-    }
 }
