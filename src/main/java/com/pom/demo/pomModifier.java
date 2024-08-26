@@ -12,11 +12,13 @@ import org.jdom2.output.XMLOutputter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
+import java.util.Scanner;
 
 public class pomModifier { // 定义一个公共类 FileScanner
     public static void main(String[] args) throws IOException, JDOMException { // 程序的入口点
-
-        String projectPath = "D:\\demo1"; // 设置项目路径变量
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("请输入项目的绝对路径：");
+        String projectPath = scanner.nextLine();
         scanForFiles(projectPath); // 调用扫描方法，开始扫描
     }
 
