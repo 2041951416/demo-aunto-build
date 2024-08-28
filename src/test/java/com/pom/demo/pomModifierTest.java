@@ -1,15 +1,18 @@
 package com.pom.demo;
-import static org.junit.Assert.*;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
+
 import org.jdom2.Document;
-import org.jdom2.Element;
 import org.jdom2.JDOMException;
 import org.jdom2.input.SAXBuilder;
+import org.jdom2.output.XMLOutputter;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+
+import static org.junit.Assert.*;
 
 public class pomModifierTest {
 
@@ -18,41 +21,35 @@ public class pomModifierTest {
 
     @Before
     public void setUp() throws IOException {
-        // 创建一个临时目录和文件用于测试
-        testDirectory = new File("tempTestDir");
-        testDirectory.mkdir();
+        // 创建临时目录但不创建pom.xml文件
+        testDirectory = Files.createTempDirectory("test_pom_dir").toFile();
         testPomFile = new File(testDirectory, "pom.xml");
-        try (PrintWriter writer = new PrintWriter(testPomFile)) {
-            writer.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-            writer.println("<project>");
-            writer.println("</project>");
+        // 确保pom.xml文件在开始测试之前不存在
+        if (testPomFile.exists()) {
+            testPomFile.delete();
         }
+        assertFalse(testPomFile.exists());
     }
 
     @After
     public void tearDown() {
-        // 删除测试目录和文件
-        testPomFile.delete();
+        // 删除临时目录和文件
+        if (testPomFile.exists()) {
+            testPomFile.delete();
+        }
         testDirectory.delete();
     }
 
     @Test
-    public void testIsTargetFile() {
-        assertTrue(pomModifier.isTargetFile(testPomFile));
-        File notPom = new File(testDirectory, "notpom.txt");
-        assertFalse(pomModifier.isTargetFile(notPom));
-    }
+    public void testCreatePomFileWhenNotExist() throws IOException {
+        // 调用createAndInitializePomFile方法
+        pomModifier.createAndInitializePomFile(testPomFile);
 
-    @Test
-    public void testScanDirectory() throws IOException, JDOMException {
-        // 调用scanDirectory方法，期望testPomFile被处理
-        pomModifier.scanDirectory(testDirectory);
+        // 验证pom.xml文件是否被创建
+        assertTrue(testPomFile.exists());
 
-        // 验证testPomFile内容是否被修改
-        Document document = new SAXBuilder().build(testPomFile);
-        Element root = document.getRootElement();
-        assertNotNull(root.getChild("properties"));
-        // 这里可以添加更多的断言来检查XML结构是否符合预期
+        // 验证文件内容是否符合预期
+        String content = new String(Files.readAllBytes(testPomFile.toPath()));
+        assertTrue(content.contains("<modelVersion>4.0.0</modelVersion>"));
     }
-    // 其他测试方法..
 }

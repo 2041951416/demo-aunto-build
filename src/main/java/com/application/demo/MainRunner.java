@@ -1,5 +1,6 @@
 package com.application.demo;
 import org.jdom2.JDOMException;
+import java.io.File;
 import java.io.IOException;
 public class MainRunner {
     public static void main(String[] args) throws IOException, JDOMException {
@@ -10,6 +11,6 @@ public class MainRunner {
         com.filterconfiguration.SlimmingConfiguration.createBootstrapProperties("D:\\demo1/conf/ark", "bootstrap.properties");
 
         // 调用 pomModifier 的方法
-        com.pom.demo.pomModifier.scanForFiles("D:\\demo1");
+        com.pom.demo.pomModifier.scanForFiles(new File("D:\\demo1"));
     }
 }
