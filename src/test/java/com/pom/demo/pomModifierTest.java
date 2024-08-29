@@ -1,55 +1,98 @@
 package com.pom.demo;
 
 import org.jdom2.Document;
-import org.jdom2.JDOMException;
+import org.jdom2.Element;
 import org.jdom2.input.SAXBuilder;
-import org.jdom2.output.XMLOutputter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-public class pomModifierTest {
+class pomModifierTest {
 
-    private File testDirectory;
-    private File testPomFile;
+    private Path tempDir;
+    private File pomFile;
 
-    @Before
-    public void setUp() throws IOException {
-        // 创建临时目录但不创建pom.xml文件
-        testDirectory = Files.createTempDirectory("test_pom_dir").toFile();
-        testPomFile = new File(testDirectory, "pom.xml");
-        // 确保pom.xml文件在开始测试之前不存在
-        if (testPomFile.exists()) {
-            testPomFile.delete();
-        }
-        assertFalse(testPomFile.exists());
+    @BeforeEach
+    void setUp() throws Exception {
+        // Create a temporary directory for testing
+        tempDir = Files.createTempDirectory("pomModifierTest");
+        pomFile = tempDir.resolve("pom.xml").toFile();
     }
 
-    @After
-    public void tearDown() {
-        // 删除临时目录和文件
-        if (testPomFile.exists()) {
-            testPomFile.delete();
-        }
-        testDirectory.delete();
+    @AfterEach
+    void tearDown() throws Exception {
+        // Clean up the temporary directory after tests
+        Files.walk(tempDir)
+                .map(Path::toFile)
+                .forEach(File::delete);
     }
 
     @Test
-    public void testCreatePomFileWhenNotExist() throws IOException {
-        // 调用createAndInitializePomFile方法
-        pomModifier.createAndInitializePomFile(testPomFile);
+    void testCreateAndInitializePomFile() throws Exception {
+        // Test the creation and initialization of the pom.xml file
+        pomModifier.createAndInitializePomFile(pomFile);
 
-        // 验证pom.xml文件是否被创建
-        assertTrue(testPomFile.exists());
+        // Verify the file exists and has content
+        assertTrue(pomFile.exists());
+        assertTrue(pomFile.length() > 0);
 
-        // 验证文件内容是否符合预期
-        String content = new String(Files.readAllBytes(testPomFile.toPath()));
-        assertTrue(content.contains("<modelVersion>4.0.0</modelVersion>"));
+        // Verify the content of the file
+        SAXBuilder builder = new SAXBuilder();
+        Document document = builder.build(pomFile);
+        Element root = document.getRootElement();
+        assertEquals("project", root.getName());
+    }
+
+    @Test
+    void testUpdatePomFileForEmptyPom() throws Exception {
+        // Create an empty pom.xml file
+        Files.write(pomFile.toPath(), new byte[0], StandardOpenOption.CREATE);
+
+        // Test updating an empty pom.xml file
+        pomModifier.updatePomFile(pomFile);
+
+        // Verify the file has been reinitialized and updated
+        SAXBuilder builder = new SAXBuilder();
+        Document document = builder.build(pomFile);
+        Element root = document.getRootElement();
+
+        assertEquals("project", root.getName());
+        assertNotNull(root.getChild("properties"));
+        assertNotNull(root.getChild("dependencies"));
+        assertNotNull(root.getChild("build"));
+    }
+
+    @Test
+    void testUpdatePomFileForValidPom() throws Exception {
+        // Initialize pom.xml with minimal valid content
+        String initialContent = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n" +
+                "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
+                "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n" +
+                "    <modelVersion>4.0.0</modelVersion>\n" +
+                "</project>";
+
+        Files.write(pomFile.toPath(), initialContent.getBytes(), StandardOpenOption.CREATE);
+
+        // Test updating a valid pom.xml file
+        pomModifier.updatePomFile(pomFile);
+
+        // Verify the file has been updated
+        SAXBuilder builder = new SAXBuilder();
+        Document document = builder.build(pomFile);
+        Element root = document.getRootElement();
+
+        assertEquals("project", root.getName());
+        assertNotNull(root.getChild("properties"));
+        assertNotNull(root.getChild("dependencies"));
+        assertNotNull(root.getChild("build"));
     }
 }

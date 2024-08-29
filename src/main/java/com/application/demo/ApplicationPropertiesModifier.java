@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 public class ApplicationPropertiesModifier {
     public static void main(String[] args) throws IOException {
         // 工程的绝对路径
-
         Scanner sc = new Scanner(System.in);
         System.out.println("请输入工程的绝对路径：");
         String projectPath = sc.nextLine();
@@ -18,12 +17,6 @@ public class ApplicationPropertiesModifier {
         // 要设置的应用名称
         System.out.println("请输入要设置的应用名称：");
         String newapplicationname = sc.nextLine();
-        // 开始修改操作
-//        modifyApplicationProperties(projectPath, newapplicationname);
-//        String projectPath = "C:\\demo810";
-//        // 要设置的应用名称
-//        String newapplicationname = "test123451236";
-
         // 开始修改操作
         modifyApplicationProperties(projectPath, newapplicationname);
     }

@@ -83,6 +83,11 @@ public class pomModifier {
     static void updatePomFile(File file) throws JDOMException, IOException {
         try {
             System.out.println("File absolute path: " + file.getAbsolutePath());
+            if (file.length() == 0) {
+                System.out.println("The pom.xml file is empty. Initializing it with default content.");
+                createAndInitializePomFile(file); // Reinitialize the empty pom.xml file
+
+            }
             SAXBuilder builder = new SAXBuilder();
             Document document = builder.build(file);
             Element root = document.getRootElement();
