@@ -1,4 +1,4 @@
-package com.pom.demo;
+package com.pomdemo;
 
 import org.jdom2.Document;
 import org.jdom2.Element;

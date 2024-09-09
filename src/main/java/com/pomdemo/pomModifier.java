@@ -1,4 +1,4 @@
-package com.pom.demo;
+package com.pomdemo;
 import java.io.File;
 import org.jdom2.Namespace;
 import org.jdom2.Document;
@@ -17,7 +17,9 @@ public class pomModifier {
         Scanner scanner = new Scanner(System.in);
         System.out.println("请输入项目的绝对路径：");
         String projectPath = scanner.nextLine();
-
+        processProjectPath(projectPath);
+    }
+    public static void processProjectPath(String projectPath) throws IOException, JDOMException {
         File projectDirectory = new File(projectPath);
         if (!projectDirectory.exists() || !projectDirectory.isDirectory()) {
             System.out.println("提供的项目路径不存在或不是目录");

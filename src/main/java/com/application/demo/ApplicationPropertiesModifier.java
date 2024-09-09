@@ -13,7 +13,6 @@ public class ApplicationPropertiesModifier {
         Scanner sc = new Scanner(System.in);
         System.out.println("请输入工程的绝对路径：");
         String projectPath = sc.nextLine();
-
         // 要设置的应用名称
         System.out.println("请输入要设置的应用名称：");
         String newapplicationname = sc.nextLine();
@@ -93,4 +92,4 @@ public class ApplicationPropertiesModifier {
             e.printStackTrace();
         }
     }
-    }
+}
