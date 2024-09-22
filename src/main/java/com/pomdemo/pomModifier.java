@@ -1,6 +1,5 @@
 package com.pomdemo;
 import java.io.File;
-import org.jdom2.Namespace;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.JDOMException;
@@ -9,209 +8,167 @@ import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.List;
 import java.util.Scanner;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import java.util.Properties;
 
 public class pomModifier {
-    public static void main(String[] args) throws IOException, JDOMException {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("请输入项目的绝对路径：");
-        String projectPath = scanner.nextLine();
-        processProjectPath(projectPath);
+    private static final Logger logger = LoggerFactory.getLogger(pomModifier.class);
+    private static Properties config = new Properties();
+    static {
+        try (java.io.InputStream input = pomModifier.class.getClassLoader().getResourceAsStream("config.properties")) {
+            config.load(input);
+        } catch (IOException ex) {
+            logger.error("无法加载配置文件", ex);
+        }
     }
+
+    public static void main(String[] args) throws IOException, JDOMException {
+        try (Scanner scanner = new Scanner(System.in)) {
+            System.out.println("请输入项目的绝对路径：");
+            String projectPath = scanner.nextLine();
+            processProjectPath(projectPath);
+        }
+    }
+
     public static void processProjectPath(String projectPath) throws IOException, JDOMException {
         File projectDirectory = new File(projectPath);
         if (!projectDirectory.exists() || !projectDirectory.isDirectory()) {
-            System.out.println("提供的项目路径不存在或不是目录");
+            logger.error("提供的项目路径不存在或不是目录");
             return;
         }
-        File initialPomFile = new File(projectDirectory, "pom.xml");
-        if (!initialPomFile.exists()) {
-            createAndInitializePomFile(initialPomFile);
+        File pomFile = new File(projectDirectory, "pom.xml");
+        if (!pomFile.exists() || pomFile.length() == 0) {
+            createAndInitializePomFile(pomFile);
         }
-        scanForFiles(projectDirectory); // 调用扫描方法，开始扫描
+        updatePomFile(pomFile);
     }
 
-    public static void createAndInitializePomFile(File pomFile) throws IOException {
-        // 创建并初始化 pom.xml 文件
+    private static void createAndInitializePomFile(File pomFile) throws IOException {
+        String initialContent = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                + "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n"
+                + "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+                + "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n"
+                + "    <modelVersion>4.0.0</modelVersion>\n"
+                + "    <groupId>com.example</groupId>\n"
+                + "    <artifactId>demo-project</artifactId>\n"
+                + "    <version>1.0-SNAPSHOT</version>\n"
+                + "</project>";
         try (FileWriter writer = new FileWriter(pomFile)) {
-            String initialContent = getInitialPomContent();
             writer.write(initialContent);
-            System.out.println("pom.xml 文件已创建并初始化在: " + pomFile.getAbsolutePath());
+            logger.info("pom.xml 文件已创建并初始化在: {}", pomFile.getAbsolutePath());
         }
     }
 
-    private static String getInitialPomContent() {
-        // 返回 pom.xml 文件的初始内容
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n" +
-                "        xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n" +
-                "        xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n" +
-                "    <modelVersion>4.0.0</modelVersion>\n" +
-                "    <!-- 其他初始化内容 -->\n" +
-                "</project>";
+    private static void updatePomFile(File file) throws JDOMException, IOException {
+        SAXBuilder builder = new SAXBuilder();
+        Document document = builder.build(file);
+        Element root = document.getRootElement();
+
+        updateProperties(root);
+        updateDependencies(root);
+        updateBuild(root);
+
+        XMLOutputter xmlOutput = new XMLOutputter();
+        xmlOutput.setFormat(Format.getPrettyFormat());
+        xmlOutput.output(document, new FileWriter(file));
+        logger.info("POM 文件已更新: {}", file.getAbsolutePath());
     }
 
-    public static void scanForFiles(File projectDirectory) throws IOException, JDOMException {
-        // 从项目目录开始递归扫描
-        scanDirectory(projectDirectory, projectDirectory);
-    }
-
-    public static void scanDirectory(File currentDirectory, File projectDirectory) throws IOException, JDOMException {
-        // 如果当前目录不是项目目录，不执行任何操作
-        if (!currentDirectory.equals(projectDirectory)) {
-            return;
+    private static void updateProperties(Element root) {
+        Element properties = root.getChild("properties");
+        if (properties == null) {
+            properties = new Element("properties");
+            root.addContent(properties);
         }
+        updateOrAddElement(properties, "sofa.ark.version", config.getProperty("sofa.ark.version"));
+        updateOrAddElement(properties, "koupleless.runtime.version", config.getProperty("koupleless.runtime.version"));
+    }
 
-        File[] files = currentDirectory.listFiles();
-        if (files != null) {
-            for (File file : files) {
-                if (file.isDirectory()) {
-                    // 递归扫描子目录
-                    scanDirectory(file, projectDirectory);
-                } else if (isTargetFile(file)) {
-                    // 更新找到的 pom.xml 文件
-                    updatePomFile(file);
-                }
-            }
+    private static void updateDependencies(Element root) {
+        Element dependencies = root.getChild("dependencies");
+        if (dependencies == null) {
+            dependencies = new Element("dependencies");
+            root.addContent(dependencies);
         }
+        Element dependency = new Element("dependency");
+        updateOrAddElement(dependency, "groupId", config.getProperty("koupleless.groupId"));
+        updateOrAddElement(dependency, "artifactId", config.getProperty("koupleless.artifactId"));
+        updateOrAddElement(dependency, "version", "${koupleless.runtime.version}");
+        dependencies.addContent(dependency);
     }
 
-    static boolean isTargetFile(File file) {
-        // 检查文件是否是 pom.xml
-        return file.getName().equalsIgnoreCase("pom.xml");
-    }
-
-    static void updatePomFile(File file) throws JDOMException, IOException {
-        try {
-            System.out.println("File absolute path: " + file.getAbsolutePath());
-            if (file.length() == 0) {
-                System.out.println("The pom.xml file is empty. Initializing it with default content.");
-                createAndInitializePomFile(file); // Reinitialize the empty pom.xml file
-
-            }
-            SAXBuilder builder = new SAXBuilder();
-            Document document = builder.build(file);
-            Element root = document.getRootElement();
-            Namespace ns = root.getNamespace();
-            if (root == null || !"project".equals(root.getName())) {
-                String initialContent = getInitialPomContent();
-                try (FileWriter writer = new FileWriter(file)) {
-                    writer.write(initialContent);
-                    System.out.println("pom.xml 文件为空或格式不正确，已初始化在: " + file.getAbsolutePath());
-                }
-            }
-                document = builder.build(file);
-                root = document.getRootElement();
-                ns = root.getNamespace();
-                //创建一个properties元素
-                List<Element> propertiesList = root.getChildren("properties", ns);
-                // 检查是否已经存在<properties>元素
-                Element properties;
-                if (propertiesList.isEmpty()) {
-                    // 如果不存在则创建<properties>元素
-                    properties = new Element("properties");
-                    root.addContent(properties);
-                } else {
-                    // 如果存在，使用第一个<properties>元素
-                    properties = propertiesList.get(0);
-
-                }
-                Element sofaark = new Element("sofa.ark.version").setText("2.2.12");
-                Element koupleless = new Element("koupleless.runtime.version").setText("1.2.3");
-                properties.addContent(sofaark);
-                properties.addContent(koupleless);
-                List<Element> dependenciesList = root.getChildren("dependencies", ns);
-                // 检查是否已经存在<dependencies>元素
-                Element dependencies;
-                if (dependenciesList.isEmpty()) {
-                    // 如果不存在则创建<dependencies>元素
-                    dependencies = new Element("dependencies");
-                    root.addContent(dependencies);
-                } else {
-                    // 如果存在，使用第一个<dependencies>元素
-                    dependencies = dependenciesList.get(0);
-                }
-                // 创建一个新的dependency元素
-                Element dependency = new Element("dependency");
-                Element groupId = new Element("groupId").setText("com.alipay.sofa.koupleless");
-                Element artifactId = new Element("artifactId").setText("koupleless-app-starter");
-                Element version = new Element("version").setText("${koupleless.runtime.version}");
-
-                // 将groupId, artifactId, version添加到dependency元素中
-                dependency.addContent(groupId);
-                dependency.addContent(artifactId);
-                dependency.addContent(version);
-
-                // 将新的dependency元素添加到dependencies元素中
-                dependencies.addContent(dependency);
-                Element build = root.getChild("build", ns);
-                if (build == null) {
-                    // 如果 <build> 不存在则创建
-                    build = new Element("build", ns);
-                    root.addContent(build);
-                }
-
-                // 获取 <plugins> 元素
-                Element plugins = build.getChild("plugins", ns);
-                if (plugins == null) {
-                    // 如果 <plugins> 不存在则创建
-                    plugins = new Element("plugins", ns);
-                    build.addContent(plugins);
-                }
-                // 创建并添加 <plugin> 元素
-                Element plugin1 = new Element("plugin", ns);
-                Element pluginGroupId = new Element("groupId", ns).setText("com.alipay.sofa");
-                Element pluginArtifactId = new Element("artifactId", ns).setText("sofa-ark-maven-plugin");
-                Element pluginVersion = new Element("version", ns).setText("{sofa.ark.version}");
-                Element executions = new Element("executions", ns);
-
-                // 添加子元素到 <plugin>
-                plugin1.addContent(pluginGroupId);
-                plugin1.addContent(pluginArtifactId);
-                plugin1.addContent(pluginVersion);
-                // 创建并添加 <executions> 元素
-                Element execution = new Element("execution", ns);
-                Element id = new Element("id", ns).setText("default-cli");
-                Element goals = new Element("goals", ns);
-                Element goal = new Element("goal", ns).setText("repackage");
-                goals.addContent(goal);
-                execution.addContent(id);
-                execution.addContent(goals);
-                executions.addContent(execution);
-                Element configuration = new Element("configuration", ns);
-                Element skipArkExectable = new Element("skipArkExecutable", ns).setText("true");
-                Element outputDirectory = new Element("outputDirectory", ns).setText("./target");
-                Element bizname = new Element("bizName", ns).setText("demo888.biz");
-                Element webcontext = new Element("webContext", ns).setText("demo888.webcontext");
-                Element declareMode = new Element("declareMode", ns).setText("true");
-                configuration.addContent(skipArkExectable);
-                configuration.addContent(outputDirectory);
-                configuration.addContent(bizname);
-                configuration.addContent(webcontext);
-                configuration.addContent(declareMode);
-                plugin1.addContent(executions);
-                plugin1.addContent(configuration);
-                Element plugin2 = new Element("plugin", ns);
-                Element pluginGroupId2 = new Element("groupId", ns).setText("org.springframework.boot");
-                Element pluginArtifactId2 = new Element("artifactId", ns).setText("spring-boot-maven-plugin");
-                plugin2.addContent(pluginGroupId2);
-                plugin2.addContent(pluginArtifactId2);
-                plugins.addContent(plugin1);
-                plugins.addContent(plugin2);
-
-                // 使用XMLOutputter输出修改后的Document到文件
-                XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
-                outputter.output(document, new FileWriter(file));
-
-                System.out.println("POM file has been updated successfully!");
-
-            } catch(Exception e){
-                e.printStackTrace();
-            }
-            System.out.println("POM 文件已更新: " + file.getAbsolutePath());
+    private static void updateBuild(Element root) {
+        Element build = root.getChild("build");
+        if (build == null) {
+            build = new Element("build");
+            root.addContent(build);
         }
-
-
+        Element plugins = build.getChild("plugins");
+        if (plugins == null) {
+            plugins = new Element("plugins");
+            build.addContent(plugins);
+        }
+        addSofaArkPlugin(plugins);
+        addSpringBootPlugin(plugins);
     }
+
+    private static Element createPluginElement(String groupId, String artifactId, String version) {
+        Element plugin = new Element("plugin");
+        updateOrAddElement(plugin, "groupId", groupId);
+        updateOrAddElement(plugin, "artifactId", artifactId);
+        if (version != null) {
+            updateOrAddElement(plugin, "version", version);
+        }
+        return plugin;
+    }
+
+    private static void addSofaArkPlugin(Element plugins) {
+        Element plugin = createPluginElement(
+                config.getProperty("sofa.ark.plugin.groupId"),
+                config.getProperty("sofa.ark.plugin.artifactId"),
+                "${sofa.ark.version}"
+        );
+
+        Element executions = new Element("executions");
+        Element execution = new Element("execution");
+        updateOrAddElement(execution, "id", "default-cli");
+
+        Element goals = new Element("goals");
+        goals.addContent(new Element("goal").setText("repackage"));
+
+        execution.addContent(goals);
+        executions.addContent(execution);
+        plugin.addContent(executions);
+
+        Element configuration = new Element("configuration");
+        updateOrAddElement(configuration, "skipArkExecutable", "true");
+        updateOrAddElement(configuration, "outputDirectory", "./target");
+        updateOrAddElement(configuration, "bizName", config.getProperty("biz.name"));
+        updateOrAddElement(configuration, "webContext", config.getProperty("web.context"));
+        updateOrAddElement(configuration, "declareMode", "true");
+        plugin.addContent(configuration);
+
+        plugins.addContent(plugin);
+    }
+
+    private static void addSpringBootPlugin(Element plugins) {
+        Element plugin = createPluginElement(
+                config.getProperty("spring.boot.plugin.groupId"),
+                config.getProperty("spring.boot.plugin.artifactId"),
+                null
+        );
+        plugins.addContent(plugin);
+    }
+
+    private static void updateOrAddElement(Element parent, String childName, String childValue) {
+        Element child = parent.getChild(childName);
+        if (child == null) {
+            child = new Element(childName);
+            parent.addContent(child);
+        }
+        child.setText(childValue);
+    }
+}
 
