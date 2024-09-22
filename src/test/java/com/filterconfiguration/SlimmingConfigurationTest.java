@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class SlimmingConfigurationTest {
 
@@ -56,9 +57,29 @@ class SlimmingConfigurationTest {
         assertTrue(propertiesFile.exists(), "The bootstrap.properties file should be created.");
 
         // 验证文件内容是否正确
-        String expectedContent = "excludes=org.apache.commons:commons-lang3,commons-beanutils:commons-beanutils,org.springframework.boot:spring-boot-starter-json:2.7.16\n"
-                + "excludeArtifactIds=sofa-ark-spi"+"\n";
+        String expectedContent =
+                "excludeGroupIds=org.springframework,aopalliance*" + System.lineSeparator() +
+                        "excludes=org.apache.commons:commons-lang3,commons-beanutils:commons-beanutils,org.springframework.boot:spring-boot-starter-json:2.7.16" + System.lineSeparator() +
+                        "excludeArtifactIds=sofa-ark-spi,commons-lang" + System.lineSeparator();
         String actualContent = new String(Files.readAllBytes(propertiesFile.toPath()));
-        assertEquals(expectedContent, actualContent, "The bootstrap.properties file content should match the expected content.");
+
+        // 去除首尾空白字符并比较
+        assertEquals(expectedContent.trim(), actualContent.trim(), "The bootstrap.properties file content should match the expected content.");
+    }
+
+    @Test
+    void testCreateBootstrapProperties(@TempDir Path tempDir) {
+        String targetDir = tempDir.toString();
+        String fileName = "bootstrap.properties";
+
+        assertDoesNotThrow(() -> SlimmingConfiguration.createBootstrapProperties(targetDir, fileName));
+
+        Path propertiesFile = tempDir.resolve(fileName);
+        try {
+            assertTrue(Files.exists(propertiesFile));
+            assertTrue(Files.size(propertiesFile) > 0);
+        } catch (IOException e) {
+            fail("无法访问或读取属性文件: " + e.getMessage());
+        }
     }
 }

@@ -51,7 +51,10 @@ public class SlimmingConfiguration {
     }
 
     private static String mergeConfigValues(String existingValue, String completeValue) {
-        Set<String> items = new LinkedHashSet<>(Arrays.asList(existingValue.split(",")));
+        Set<String> items = new LinkedHashSet<>();
+        if (!existingValue.isEmpty()) {
+            items.addAll(Arrays.asList(existingValue.split(",")));
+        }
         items.addAll(Arrays.asList(completeValue.split(",")));
         return String.join(",", items);
     }
