@@ -1,63 +1,85 @@
 package com.filterconfiguration;
+import static org.junit.jupiter.api.Assertions.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.io.TempDir;
 
 class SlimmingConfigurationTest {
 
-    private File mockDirectory;
-    private File mockFile;
+    private Path testDirectory;
+    private String targetDirectory;
+    private String fileName = "bootstrap.properties";
 
     @BeforeEach
-    void setUp() {
-        mockDirectory = mock(File.class);
-        mockFile = mock(File.class);
+    void setUp() throws IOException {
+        // 创建测试目录
+        testDirectory = Files.createTempDirectory("testDirectory");
+        targetDirectory = testDirectory.toString();
+    }
+
+    @AfterEach
+    void tearDown() throws IOException {
+        // 删除测试目录及其内容
+        Files.walk(testDirectory)
+                .sorted((p, n) -> -p.compareTo(n))
+                .forEach(p -> {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
     }
 
     @Test
-    void testCreateBootstrapProperties() throws IOException {
-        String targetDirectory = "C:\\demo810/conf/ark";
+    void testCreateBootstrapProperties_DirectoryCreated() {
+        // 调用方法创建bootstrap.properties文件
+        SlimmingConfiguration.createBootstrapProperties(targetDirectory, fileName);
+
+        // 验证目录是否被创建
+        File directory = new File(targetDirectory);
+        assertTrue(directory.exists(), "The target directory should be created.");
+    }
+
+    @Test
+    void testCreateBootstrapProperties_FileCreatedAndWritten() throws IOException {
+        // 调用方法创建bootstrap.properties文件
+        SlimmingConfiguration.createBootstrapProperties(targetDirectory, fileName);
+
+        // 验证文件是否被创建
+        File propertiesFile = new File(targetDirectory, fileName);
+        assertTrue(propertiesFile.exists(), "The bootstrap.properties file should be created.");
+
+        // 验证文件内容是否正确
+        String expectedContent =
+                "excludeGroupIds=org.springframework,aopalliance*" + System.lineSeparator() +
+                        "excludes=org.apache.commons:commons-lang3,commons-beanutils:commons-beanutils,org.springframework.boot:spring-boot-starter-json:2.7.16" + System.lineSeparator() +
+                        "excludeArtifactIds=sofa-ark-spi,commons-lang" + System.lineSeparator();
+        String actualContent = new String(Files.readAllBytes(propertiesFile.toPath()));
+
+        // 去除首尾空白字符并比较
+        assertEquals(expectedContent.trim(), actualContent.trim(), "The bootstrap.properties file content should match the expected content.");
+    }
+
+    @Test
+    void testCreateBootstrapProperties(@TempDir Path tempDir) {
+        String targetDir = tempDir.toString();
         String fileName = "bootstrap.properties";
 
-        try (MockedStatic<File> mockedFile = Mockito.mockStatic(File.class);
-             MockedStatic<FileWriter> mockedFileWriter = Mockito.mockStatic(FileWriter.class)) {
+        assertDoesNotThrow(() -> SlimmingConfiguration.createBootstrapProperties(targetDir, fileName));
 
-            // 模拟目录不存在并创建成功
-            mockedFile.when(() -> new File(targetDirectory)).thenReturn(mockDirectory);
-            when(mockDirectory.exists()).thenReturn(false);
-            when(mockDirectory.mkdirs()).thenReturn(true);
-
-            // 模拟文件不存在并创建成功
-            mockedFile.when(() -> new File(mockDirectory, fileName)).thenReturn(mockFile);
-            when(mockFile.createNewFile()).thenReturn(true);
-
-            // 捕获写入内容
-            ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
-            FileWriter mockWriter = mock(FileWriter.class);
-            mockedFileWriter.when(() -> new FileWriter(mockFile)).thenReturn(mockWriter);
-
-            doNothing().when(mockWriter).write(contentCaptor.capture());
-
-            // 调用待测试方法
-            SlimmingConfiguration.createBootstrapProperties(targetDirectory, fileName);
-
-            // 验证目录是否创建
-            verify(mockDirectory).mkdirs();
-
-            // 验证写入的内容
-            String expectedContent = "excludes=org.apache.commons:commons-lang3,commons-beanutils:commons-beanutils,org.springframework.boot:spring-boot-starter-json:2.7.16\n" +
-                    "excludeArtifactIds=sofa-ark-spi\n";
-            assertEquals(expectedContent, String.join("", contentCaptor.getAllValues()));
+        Path propertiesFile = tempDir.resolve(fileName);
+        try {
+            assertTrue(Files.exists(propertiesFile));
+            assertTrue(Files.size(propertiesFile) > 0);
+        } catch (IOException e) {
+            fail("无法访问或读取属性文件: " + e.getMessage());
         }
     }
 }
